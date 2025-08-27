@@ -57,15 +57,6 @@
 			</div>
 
 			<div class="col-md-6">
-				<label for="courseId" class="form-label">Select Course</label>
-				<select class="form-select" id="courseId" th:field="*{courseId}" required>
-					<option value="">-Select-</option>
-					<option th:each="course : ${courses}" th:value="${course.courseId}" th:text="${course.courseName}">
-					</option>
-				</select>
-			</div>
-
-			<div class="col-md-6">
     			<label for="courseId" class="form-label">Select Course</label>
     				<select class="form-select" id="courseId" th:field="*{courseId}" required>
         				<option value="">-Select-</option>
@@ -75,6 +66,16 @@
         				<option value="4">Spring Boot</option>
         				<option value="5">React</option>
     			</select>
+			</div>
+
+			<div class="col-md-6">
+				<label for="enquiryStatus" class="form-label">Enquiry Status</label>
+				<select class="form-select" id="enquiryStatus" th:field="*{enquiryStatus}" required>
+					<option value="">-Select-</option>
+					<option value="OPEN">Open</option>
+					<option value="ENROLLED">Enrolled</option>
+					<option value="LOST">Lost</option>
+				</select>
 			</div>
 			
 			<div class="col-12">
