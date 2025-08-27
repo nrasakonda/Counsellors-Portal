@@ -3,6 +3,7 @@ package in.java.controller;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,71 +12,119 @@ import org.springframework.web.bind.annotation.PostMapping;
 
 import in.java.dto.EnquiryDto;
 import in.java.entities.Course;
+import in.java.entities.Counsellor;
 import in.java.entities.Enquiry;
+import in.java.service.EnquiryService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
 @Controller
 public class EnquiryController {
 
-    // Hardcoded course list
-    private List<Course> courses = new ArrayList<>();
+    @Autowired
+    private EnquiryService enquiryService;
 
-    public EnquiryController() {
-        courses.add(new Course(1, "Java"));
-        courses.add(new Course(2, "Python"));
-        courses.add(new Course(3, "AWS"));
-        courses.add(new Course(4, "Spring Boot"));
+    // Hardcoded courses
+    private List<Course> getHardcodedCourses() {
+        List<Course> courses = new ArrayList<>();
+        Course c1 = new Course();
+        c1.setCourseId(1);
+        c1.setCourseName("Java");
+
+        Course c2 = new Course();
+        c2.setCourseId(2);
+        c2.setCourseName("Python");
+
+        Course c3 = new Course();
+        c3.setCourseId(3);
+        c3.setCourseName("Data Science");
+
+        Course c4 = new Course();
+        c4.setCourseId(4);
+        c4.setCourseName("Spring Boot");
+
+        Course c5 = new Course();
+        c5.setCourseId(5);
+        c5.setCourseName("React");
+
+        courses.add(c1);
+        courses.add(c2);
+        courses.add(c3);
+        courses.add(c4);
+        courses.add(c5);
+
+        return courses;
     }
 
     @GetMapping("/enquiry")
     public String loadAddEnquiryForm(Model model) {
         model.addAttribute("enquiryDto", new EnquiryDto());
-        model.addAttribute("courses", courses);
+        model.addAttribute("courses", getHardcodedCourses());
         return "add-enq";
     }
 
     @PostMapping("/enquiry")
     public String addEnquiry(@ModelAttribute("enquiryDto") EnquiryDto enquiryDto,
-                             HttpServletRequest request, Model model) {
+                             HttpServletRequest request,
+                             Model model) {
         HttpSession session = request.getSession(false);
+        if (session == null || session.getAttribute("CID") == null) {
+            model.addAttribute("emsg", "Session expired! Please login again.");
+            model.addAttribute("courses", getHardcodedCourses());
+            return "add-enq";
+        }
+
         Integer counsellorId = (Integer) session.getAttribute("CID");
 
-        // Manually map courseId to Course object
-        Course selectedCourse = courses.stream()
-                                       .filter(c -> c.getCourseId().equals(enquiryDto.getCourseId()))
-                                       .findFirst()
-                                       .orElse(new Course(0, "Unknown"));
-
+        // Create Enquiry entity
         Enquiry enquiry = new Enquiry();
         enquiry.setStudentName(enquiryDto.getStudentName());
         enquiry.setStudentPhno(enquiryDto.getStudentPhno());
         enquiry.setClassMode(enquiryDto.getClassMode());
         enquiry.setEnquiryStatus(enquiryDto.getEnquiryStatus());
-        enquiry.setCourse(selectedCourse);
-        enquiry.setCounsellorId(counsellorId); // add counsellor mapping if needed
 
-        // Save logic (in memory or just skip DB persistence)
-        // Example: store in session or static list
-        List<Enquiry> allEnquiries = (List<Enquiry>) session.getAttribute("enquiries");
-        if (allEnquiries == null) {
-            allEnquiries = new ArrayList<>();
+        // Assign hardcoded course
+        Course selectedCourse = getHardcodedCourses().stream()
+                .filter(c -> c.getCourseId() == enquiryDto.getCourseId())
+                .findFirst()
+                .orElse(null);
+
+        if (selectedCourse == null) {
+            model.addAttribute("emsg", "Invalid course selected!");
+            model.addAttribute("courses", getHardcodedCourses());
+            return "add-enq";
         }
-        allEnquiries.add(enquiry);
-        session.setAttribute("enquiries", allEnquiries);
 
-        // Redirect to view page
-        return "redirect:/view-enquiries";
+        enquiry.setCourse(selectedCourse);
+
+        // Assign counsellor
+        Counsellor c = new Counsellor();
+        c.setId(counsellorId);  // assuming Counsellor entity has setId()
+        enquiry.setCounsellor(c);
+
+        boolean isSaved = enquiryService.insertEnquiry(enquiry);
+
+        if (isSaved) {
+            return "redirect:/view-enquiries";
+        } else {
+            model.addAttribute("emsg", "Failed to add Enquiry");
+            model.addAttribute("courses", getHardcodedCourses());
+            return "add-enq";
+        }
     }
 
     @GetMapping("/view-enquiries")
-    public String viewEnquiries(HttpServletRequest request, Model model) {
+    public String viewEnquiries(Model model, HttpServletRequest request) {
         HttpSession session = request.getSession(false);
-        List<Enquiry> enqList = (List<Enquiry>) session.getAttribute("enquiries");
-        if (enqList == null) {
-            enqList = new ArrayList<>();
+        if (session == null || session.getAttribute("CID") == null) {
+            model.addAttribute("emsg", "Session expired! Please login again.");
+            return "add-enq";
         }
+
+        Integer counsellorId = (Integer) session.getAttribute("CID");
+        List<Enquiry> enqList = enquiryService.getAllEnquiry(counsellorId);
         model.addAttribute("enquiries", enqList);
+
         return "view-enqs";
     }
 }
