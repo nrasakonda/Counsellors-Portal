@@ -24,4 +24,5 @@ public interface EnquiryService {
 
 	public List<Course> getCourses();
 
+	boolean deleteEnquiry(Integer enquiryId, Integer counsellorId);
 }

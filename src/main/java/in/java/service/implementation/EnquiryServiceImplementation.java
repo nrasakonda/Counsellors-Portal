@@ -107,4 +107,18 @@ public class EnquiryServiceImplementation implements EnquiryService {
 	public List<Course> getCourses() {
 		return courseRepo.findAll();
 	}
+
+	@Override
+	public boolean deleteEnquiry(Integer enquiryId, Integer counsellorId) {
+		Optional<Enquiry> enqOpt = enquiryRepo.findById(enquiryId);
+		if (enqOpt.isPresent()) {
+			Enquiry enquiry = enqOpt.get();
+			if (enquiry.getCounsellor().getCounsellorId().equals(counsellorId)) {
+				enquiryRepo.deleteById(enquiryId);
+				return true;
+			}
+		}
+		return false;
+	}
+
 }
